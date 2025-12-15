@@ -28,62 +28,8 @@ export const generateRadarData = (): ChartDataPoint[] => [
   { name: 'Rendimiento', value: 95 },
 ];
 
-export const initialCharts: ChartConfig[] = [
-  {
-    id: '1',
-    title: 'Ingresos Mensuales',
-    type: 'area',
-    dataKey: 'value',
-    color: 'hsl(var(--chart-1))',
-    data: generateTimeSeriesData(),
-    size: 'large',
-  },
-  {
-    id: '2',
-    title: 'Usuarios Activos',
-    type: 'line',
-    dataKey: 'users',
-    color: 'hsl(var(--chart-2))',
-    data: generateTimeSeriesData(),
-    size: 'medium',
-  },
-  {
-    id: '3',
-    title: 'Ventas por Categoría',
-    type: 'pie',
-    dataKey: 'value',
-    color: 'hsl(var(--chart-3))',
-    data: generateCategoryData(),
-    size: 'medium',
-  },
-  {
-    id: '4',
-    title: 'Sesiones por Mes',
-    type: 'bar',
-    dataKey: 'sessions',
-    color: 'hsl(var(--chart-4))',
-    data: generateTimeSeriesData(),
-    size: 'medium',
-  },
-  {
-    id: '5',
-    title: 'Distribución de Productos',
-    type: 'donut',
-    dataKey: 'value',
-    color: 'hsl(var(--chart-5))',
-    data: generateCategoryData(),
-    size: 'medium',
-  },
-  {
-    id: '6',
-    title: 'Métricas de Sistema',
-    type: 'radar',
-    dataKey: 'value',
-    color: 'hsl(var(--chart-6))',
-    data: generateRadarData(),
-    size: 'medium',
-  },
-];
+// Array vacío - sin gráficos predefinidos. El usuario creará sus propios gráficos
+export const initialCharts: ChartConfig[] = [];
 
 export const statsData = [
   { label: 'Total Usuarios', value: '24,589', change: '+12.5%', positive: true },

@@ -8,6 +8,19 @@ export interface ChartConfig {
   color: string;
   data: ChartDataPoint[];
   size?: 'small' | 'medium' | 'large';
+  // Configuración de MongoDB
+  mongoSource?: {
+    collection: string;
+    nameField: string;
+    valueField: string;
+    filter?: any;
+    pipeline?: any[];
+  };
+  // Configuración de auto-refresh
+  autoRefresh?: {
+    enabled: boolean;
+    interval: number; // en segundos
+  };
 }
 
 export interface ChartDataPoint {
