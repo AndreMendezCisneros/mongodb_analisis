@@ -1,4 +1,30 @@
-const API_BASE_URL = '/api';
+// Detectar si estamos en desarrollo o producción
+const getApiBaseUrl = () => {
+  // En desarrollo, usar el proxy de Vite
+  if (import.meta.env.DEV) {
+    return '/api';
+  }
+  
+  // En producción, usar la variable de entorno o la URL del servidor
+  const apiUrl = import.meta.env.VITE_API_URL;
+  if (apiUrl) {
+    return apiUrl.endsWith('/api') ? apiUrl : `${apiUrl}/api`;
+  }
+  
+  // Si no hay variable de entorno, intentar usar la misma URL pero con el puerto del backend
+  const currentHost = window.location.hostname;
+  const backendPort = import.meta.env.VITE_BACKEND_PORT || '3001';
+  
+  // Si estamos en localhost, usar localhost:3001
+  if (currentHost === 'localhost' || currentHost === '127.0.0.1') {
+    return `http://${currentHost}:${backendPort}/api`;
+  }
+  
+  // En producción, asumir que el backend está en el mismo dominio
+  return '/api';
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 export interface SATEAnalysisResult {
   success: boolean;

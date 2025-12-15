@@ -181,9 +181,16 @@ SERVER_PORT=3001
 
 ### 3. Variables de Entorno Explicadas
 
+**Backend (.env):**
 - **MONGODB_URI**: URI de conexión a MongoDB (puede ser Atlas o local)
 - **MONGODB_DB_NAME**: Nombre de la base de datos a usar
 - **SERVER_PORT**: Puerto donde correrá el servidor backend (default: 3001)
+
+**Frontend (para producción):**
+- **VITE_API_URL**: URL completa del servidor backend en producción (ej: `https://tu-servidor.com:3001`)
+- **VITE_BACKEND_PORT**: Puerto del servidor backend (default: 3001)
+
+**Nota:** En desarrollo, el proxy de Vite maneja automáticamente las peticiones a `/api`. En producción, debes configurar `VITE_API_URL` con la URL completa de tu servidor backend.
 
 ---
 
@@ -480,6 +487,34 @@ El modelo considera 4 factores principales:
 - El frontend esté en `http://localhost:8080`
 - El backend esté en `http://localhost:3001`
 - El proxy en `vite.config.ts` esté configurado correctamente
+
+### Error: "No se puede conectar al servidor" en producción
+
+**Causa:** En producción, el proxy de Vite no funciona. El frontend necesita conocer la URL completa del servidor backend.
+
+**Solución:**
+1. Configura la variable de entorno `VITE_API_URL` antes de hacer el build:
+   ```bash
+   export VITE_API_URL=https://tu-servidor-backend.com:3001
+   npm run build
+   ```
+   
+   O crea un archivo `.env.production`:
+   ```env
+   VITE_API_URL=https://tu-servidor-backend.com:3001
+   ```
+
+2. Si el backend está en el mismo dominio pero diferente puerto, usa:
+   ```env
+   VITE_API_URL=https://tu-dominio.com:3001
+   ```
+
+3. Si el backend está en un subdominio, usa:
+   ```env
+   VITE_API_URL=https://api.tu-dominio.com
+   ```
+
+4. Verifica que el servidor backend esté accesible desde el navegador accediendo a `https://tu-servidor-backend.com:3001/api/health`
 
 ---
 

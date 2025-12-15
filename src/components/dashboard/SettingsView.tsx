@@ -34,7 +34,17 @@ export const SettingsView = () => {
         setSuccess(false);
       }, 3000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al conectar');
+      const errorMessage = err instanceof Error ? err.message : 'Error al conectar';
+      setError(errorMessage);
+      console.error('Error de conexión:', err);
+      
+      // Si es un error de conexión al servidor, mostrar ayuda adicional
+      if (errorMessage.includes('No se puede conectar al servidor')) {
+        const isProduction = !import.meta.env.DEV;
+        if (isProduction) {
+          setError(`${errorMessage}\n\nEn producción, asegúrate de configurar la variable de entorno VITE_API_URL con la URL completa del servidor backend.`);
+        }
+      }
     } finally {
       setSaving(false);
     }
@@ -147,7 +157,16 @@ export const SettingsView = () => {
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
               <AlertTitle>Error</AlertTitle>
-              <AlertDescription>{error}</AlertDescription>
+              <AlertDescription className="whitespace-pre-wrap">
+                {error}
+                {import.meta.env.DEV && (
+                  <div className="mt-2 pt-2 border-t border-destructive/50">
+                    <p className="text-xs font-mono">
+                      URL del API: {import.meta.env.VITE_API_URL || '/api (proxy)'}
+                    </p>
+                  </div>
+                )}
+              </AlertDescription>
             </Alert>
           )}
 
@@ -195,6 +214,23 @@ export const SettingsView = () => {
             Si ya tienes una conexión activa usando la configuración del archivo <code className="bg-secondary px-1 py-0.5 rounded">.env</code>, 
             puedes usar este formulario para conectarte a una base de datos diferente.
           </p>
+          {!import.meta.env.DEV && (
+            <Alert className="mt-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Modo Producción</AlertTitle>
+              <AlertDescription className="text-xs">
+                <p className="mb-2">
+                  En producción, asegúrate de que la variable de entorno <code className="bg-secondary px-1 py-0.5 rounded">VITE_API_URL</code> esté configurada con la URL completa de tu servidor backend.
+                </p>
+                <p className="font-mono text-xs break-all">
+                  URL actual del API: {import.meta.env.VITE_API_URL || 'No configurada (usando /api)'}
+                </p>
+                <p className="mt-2 text-xs">
+                  Abre la consola del navegador (F12) para ver más detalles de depuración.
+                </p>
+              </AlertDescription>
+            </Alert>
+          )}
         </CardContent>
       </Card>
     </div>

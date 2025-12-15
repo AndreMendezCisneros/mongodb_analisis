@@ -32,8 +32,12 @@ export const Sidebar = ({
       <div className="flex h-full flex-col">
         {/* Logo */}
         <div className="flex h-16 items-center gap-3 border-b border-sidebar-border px-6">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
-            <BarChart3 className="h-5 w-5 text-primary-foreground" />
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg overflow-hidden">
+            <img 
+              src="/icono1.png" 
+              alt="DataViz Logo" 
+              className="h-full w-full object-contain"
+            />
           </div>
           <span className="text-lg font-semibold gradient-text">DataViz</span>
         </div>
