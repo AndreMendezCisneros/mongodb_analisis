@@ -14,6 +14,7 @@ import { DataExplorerView } from '@/components/dashboard/DataExplorerView';
 import { SettingsView } from '@/components/dashboard/SettingsView';
 import { ChartsView } from '@/components/dashboard/ChartsView';
 import { AnalyticsView } from '@/components/dashboard/AnalyticsView';
+import { DashboardView } from '@/components/dashboard/DashboardView';
 import { Footer } from '@/components/dashboard/Footer';
 import { getCollectionData, executeAggregation } from '@/services/mongodb';
 import { transformMongoDataToChart } from '@/utils/mongodbTransform';
@@ -245,7 +246,9 @@ const Index = () => {
         <Header />
         
         <div className="p-6 flex-1">
-          {activeCategory === 'Analytics' ? (
+          {activeCategory === 'Dashboard' ? (
+            <DashboardView />
+          ) : activeCategory === 'Analytics' ? (
             <AnalyticsView />
           ) : activeCategory === 'Colecciones' ? (
             <CollectionsView />

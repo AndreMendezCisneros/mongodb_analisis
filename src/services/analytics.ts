@@ -75,14 +75,16 @@ export interface SATEAnalysisResult {
 
 /**
  * Ejecuta el análisis SATE-SR completo
+ * @param signal - AbortSignal opcional para cancelar la petición
  */
-export async function ejecutarAnalisisSATE(): Promise<SATEAnalysisResult> {
+export async function ejecutarAnalisisSATE(signal?: AbortSignal): Promise<SATEAnalysisResult> {
   try {
     const response = await fetch(`${API_BASE_URL}/analytics/sate-analysis`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
+      signal, // Agregar soporte para cancelación
     });
 
     if (!response.ok) {
@@ -98,6 +100,11 @@ export async function ejecutarAnalisisSATE(): Promise<SATEAnalysisResult> {
     const data = await response.json();
     return data;
   } catch (error) {
+    // No lanzar error si fue cancelado
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw error;
+    }
+    
     console.error('Error ejecutando análisis SATE:', error);
     
     // Si es un error de red, proporcionar un mensaje más útil

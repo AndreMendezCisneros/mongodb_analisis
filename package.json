@@ -6,11 +6,19 @@
   "scripts": {
     "dev": "vite",
     "dev:server": "node server/index.js",
+    "dev:python": "cd server/python_analysis && py app.py",
     "dev:all": "concurrently \"npm run dev:server\" \"npm run dev\"",
+    "dev:all-with-python": "concurrently \"npm run dev:server\" \"npm run dev:python\" \"npm run dev\"",
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "python:install": "cd server/python_analysis && py -m pip install -r requirements.txt",
+    "python:install:minimal": "cd server/python_analysis && py -m pip install -r requirements_minimal.txt",
+    "python:install:windows": "cd server/python_analysis && py -m pip install -r requirements_windows.txt",
+    "python:check": "cd server/python_analysis && py -c \"import flask, pymongo; print('✅ Dependencias básicas instaladas')\"",
+    "python:check:full": "cd server/python_analysis && py -c \"import flask, pymongo, sklearn, numpy, pandas, pysentimiento; print('✅ Todas las dependencias están instaladas')\"",
+    "python:install:pysentimiento": "cd server/python_analysis && py -m pip install pysentimiento torch transformers"
   },
   "dependencies": {
     "@fontsource/jetbrains-mono": "^5.2.8",

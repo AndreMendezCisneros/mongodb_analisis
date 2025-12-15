@@ -30,11 +30,21 @@ export const PieChartComponent = ({ data, dataKey, isDonut = false }: PieChartPr
           backgroundColor: 'hsl(var(--popover))',
           border: '1px solid hsl(var(--border))',
           borderRadius: '8px',
-          color: 'hsl(var(--foreground))',
+          color: '#ffffff',
+        }}
+        labelStyle={{
+          color: '#ffffff',
+          fontWeight: 'bold',
+        }}
+        itemStyle={{
+          color: '#ffffff',
+        }}
+        formatter={(value: any, name: string) => {
+          return [`${value}`, name];
         }}
       />
       <Legend 
-        wrapperStyle={{ fontSize: '12px', color: 'hsl(var(--muted-foreground))' }}
+        wrapperStyle={{ fontSize: '12px', color: 'hsl(var(--foreground))' }}
         iconType="circle"
         iconSize={8}
       />

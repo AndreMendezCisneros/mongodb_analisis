@@ -206,9 +206,30 @@ npm run dev:all
 
 Esto iniciará tanto el servidor backend como el frontend simultáneamente.
 
+### Opción 1b: Ejecutar con Servicio Python (Recomendado para Análisis)
+
+Si quieres usar Python para el análisis SATE-SR (mejor rendimiento y librerías ML):
+
+1. **Instala las dependencias Python:**
+```bash
+npm run python:install
+```
+
+2. **Ejecuta todo junto:**
+```bash
+npm run dev:all-with-python
+```
+
+Esto iniciará:
+- ✅ Servidor Node.js (puerto 3001)
+- ✅ Servicio Python (puerto 5000) 
+- ✅ Frontend React (puerto 8080)
+
+**Nota:** El sistema **SOLO usa Python** para el análisis SATE-SR. El servicio Python debe estar corriendo para que el análisis funcione. Ver `SETUP_PYTHON.md` para más detalles sobre cómo configurar y ejecutar el servicio Python.
+
 ### Opción 2: Ejecutar por Separado
 
-**Terminal 1 - Backend:**
+**Terminal 1 - Backend Node.js:**
 ```bash
 npm run dev:server
 ```
@@ -216,10 +237,19 @@ npm run dev:server
 Deberías ver:
 ```
 🚀 Servidor ejecutándose en http://localhost:3001
-📊 MongoDB URI configurada: Sí
 ```
 
-**Terminal 2 - Frontend:**
+**Terminal 2 - Servicio Python (OBLIGATORIO):**
+```bash
+npm run dev:python
+```
+
+Deberías ver:
+```
+ * Running on http://0.0.0.0:5000
+```
+
+**Terminal 3 - Frontend:**
 ```bash
 npm run dev
 ```
@@ -233,8 +263,11 @@ VITE v5.x.x  ready in xxx ms
 
 ### Verificación
 
-- **Backend**: Abre `http://localhost:3001/api/health` en tu navegador. Deberías ver `{"status":"ok","timestamp":"..."}`
+- **Backend Node.js**: Abre `http://localhost:3001/api/health` en tu navegador. Deberías ver `{"status":"ok","timestamp":"..."}`
+- **Servicio Python**: Abre `http://localhost:5000/health` en tu navegador. Deberías ver `{"status":"ok","service":"python-analysis"}`
 - **Frontend**: Abre `http://localhost:8080` en tu navegador. Deberías ver la aplicación DataViz.
+
+**⚠️ IMPORTANTE:** El análisis SATE-SR **requiere** que el servicio Python esté corriendo. Si intentas ejecutar el análisis sin el servicio Python, recibirás un error claro indicando que el servicio no está disponible.
 
 ---
 
@@ -520,12 +553,19 @@ El modelo considera 4 factores principales:
 
 ## 📝 Scripts Disponibles
 
+### Scripts Principales
 - `npm run dev` - Inicia el servidor de desarrollo del frontend
 - `npm run dev:server` - Inicia el servidor backend
 - `npm run dev:all` - Inicia frontend y backend simultáneamente
+- `npm run dev:all-with-python` - Inicia frontend, backend y servicio Python simultáneamente
 - `npm run build` - Construye la aplicación para producción
 - `npm run preview` - Previsualiza la build de producción
 - `npm run lint` - Ejecuta el linter
+
+### Scripts Python (Opcional)
+- `npm run python:install` - Instala dependencias Python
+- `npm run python:check` - Verifica que las dependencias Python estén instaladas
+- `npm run dev:python` - Inicia solo el servicio Python
 
 ---
 

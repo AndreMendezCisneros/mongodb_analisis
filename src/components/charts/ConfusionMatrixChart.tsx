@@ -14,26 +14,29 @@ export const ConfusionMatrixChart = ({
   verdaderosNegativos,
   falsosNegativos,
 }: ConfusionMatrixChartProps) => {
-  // Nota: En nuestro modelo:
-  // - verdaderosPositivos = Predicho Aprueba (1) y Real Aprueba (1) = SEGURO predicho y real
-  // - falsosPositivos = Predicho Aprueba (1) y Real Desaprueba (0) = SEGURO predicho pero RIESGO real
-  // - verdaderosNegativos = Predicho Desaprueba (0) y Real Desaprueba (0) = RIESGO predicho y real
-  // - falsosNegativos = Predicho Desaprueba (0) y Real Aprueba (1) = RIESGO predicho pero SEGURO real
+  // CORRECCIÓN: En clasificación binaria estándar:
+  // Clase Positiva (1) = APRUEBA
+  // Clase Negativa (0) = DESAPRUEBA
   //
-  // Para la matriz con etiquetas RIESGO (0) / SEGURO (1):
-  // - RIESGO (0) = Desaprueba (0)
-  // - SEGURO (1) = Aprueba (1)
+  // Verdaderos Positivos (TP) = Predicho Aprueba (1) y Real Aprueba (1)
+  // Falsos Positivos (FP) = Predicho Aprueba (1) y Real Desaprueba (0)
+  // Verdaderos Negativos (TN) = Predicho Desaprueba (0) y Real Desaprueba (0)
+  // Falsos Negativos (FN) = Predicho Desaprueba (0) y Real Aprueba (1)
+  //
+  // Para la matriz visual:
+  // - Eje Y (Real): RIESGO (0) = Desaprueba, SEGURO (1) = Aprueba
+  // - Eje X (Predicho): RIESGO (0) = Desaprueba, SEGURO (1) = Aprueba
   const data = useMemo(() => {
     return [
       {
         name: 'RIESGO (0)', // Real = Desaprueba
-        'RIESGO (0)': verdaderosNegativos, // Predicho Desaprueba y Real Desaprueba = TP para RIESGO
-        'SEGURO (1)': falsosNegativos, // Predicho Desaprueba pero Real Aprueba = FN para RIESGO
+        'RIESGO (0)': verdaderosNegativos, // Predicho Desaprueba y Real Desaprueba (TN) ✓ Correcto
+        'SEGURO (1)': falsosPositivos, // Predicho Aprueba pero Real Desaprueba (FP) ✗ Error
       },
       {
         name: 'SEGURO (1)', // Real = Aprueba
-        'RIESGO (0)': falsosPositivos, // Predicho Aprueba pero Real Desaprueba = FP para SEGURO
-        'SEGURO (1)': verdaderosPositivos, // Predicho Aprueba y Real Aprueba = TN para SEGURO
+        'RIESGO (0)': falsosNegativos, // Predicho Desaprueba pero Real Aprueba (FN) ✗ Error
+        'SEGURO (1)': verdaderosPositivos, // Predicho Aprueba y Real Aprueba (TP) ✓ Correcto
       },
     ];
   }, [verdaderosPositivos, falsosPositivos, verdaderosNegativos, falsosNegativos]);
@@ -142,12 +145,12 @@ export const ConfusionMatrixChart = ({
           {verdaderosNegativos}
         </div>
         <div className="bg-red-100 dark:bg-red-900/30 p-3 rounded text-center font-bold border-2 border-red-500">
-          {falsosNegativos}
+          {falsosPositivos}
         </div>
         
         <div className="text-sm font-medium">Real: SEGURO (1)</div>
         <div className="bg-red-100 dark:bg-red-900/30 p-3 rounded text-center font-bold border-2 border-red-500">
-          {falsosPositivos}
+          {falsosNegativos}
         </div>
         <div className="bg-green-100 dark:bg-green-900/30 p-3 rounded text-center font-bold border-2 border-green-500">
           {verdaderosPositivos}

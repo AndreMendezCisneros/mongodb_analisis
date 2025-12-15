@@ -199,7 +199,10 @@ app.post('/api/mongodb/disconnect', async (req, res) => {
   }
 });
 
-// Endpoint: Ejecutar análisis SATE-SR
+// Configuración del servicio Python (SOLO PYTHON - sin fallback a JavaScript)
+const PYTHON_SERVICE_URL = process.env.PYTHON_SERVICE_URL || 'http://localhost:5000';
+
+// Endpoint: Ejecutar análisis SATE-SR (SOLO PYTHON)
 app.post('/api/analytics/sate-analysis', async (req, res) => {
   try {
     const status = await checkConnection();
@@ -217,28 +220,85 @@ app.post('/api/analytics/sate-analysis', async (req, res) => {
       });
     }
 
-    console.log('📊 Iniciando análisis SATE-SR...');
-    const { ejecutarAnalisisSATE } = await import('./sateAnalysis.js');
-    const resultado = await ejecutarAnalisisSATE(db);
+    console.log('📊 Iniciando análisis SATE-SR (Python - único método)...');
     
-    console.log('✅ Análisis SATE-SR completado exitosamente');
-    res.json(resultado);
+    // Verificar si el servicio Python está disponible
+    let healthCheck;
+    try {
+      healthCheck = await fetch(`${PYTHON_SERVICE_URL}/health`, {
+        method: 'GET',
+        signal: AbortSignal.timeout(2000) // Timeout de 2 segundos
+      });
+    } catch (healthError) {
+      return res.status(503).json({
+        success: false,
+        error: `El servicio Python no está disponible en ${PYTHON_SERVICE_URL}. Por favor, asegúrate de que el servicio Python esté corriendo.`,
+        detalles: `Ejecuta: cd server/python_analysis && py app.py`,
+        tipo_error: 'SERVICIO_PYTHON_NO_DISPONIBLE'
+      });
+    }
+
+    if (!healthCheck || !healthCheck.ok) {
+      return res.status(503).json({
+        success: false,
+        error: `El servicio Python no está respondiendo correctamente en ${PYTHON_SERVICE_URL}. Verifica que el servicio esté corriendo y funcionando.`,
+        detalles: `Ejecuta: cd server/python_analysis && py app.py`,
+        tipo_error: 'SERVICIO_PYTHON_NO_RESPONDE'
+      });
+    }
+
+    // Usar servicio Python (único método)
+    const response = await fetch(`${PYTHON_SERVICE_URL}/sate-analysis`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        mongodb_uri: process.env.MONGODB_URI,
+        database_name: db.databaseName
+      }),
+      signal: AbortSignal.timeout(300000) // Timeout de 5 minutos para el análisis
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      const errorMessage = errorData.error || `Error del servicio Python: ${response.status} ${response.statusText}`;
+      
+      return res.status(response.status || 500).json({
+        success: false,
+        error: errorMessage,
+        detalles: errorData.detalles || errorData.stack,
+        tipo_error: 'ERROR_SERVICIO_PYTHON'
+      });
+    }
+
+    const resultado = await response.json();
+    console.log('✅ Análisis SATE-SR completado exitosamente (Python)');
+    return res.json(resultado);
+    
   } catch (error) {
     console.error('❌ Error ejecutando análisis SATE:', error);
     
     // Proporcionar mensajes de error más descriptivos
     let mensajeError = error.message || 'Error desconocido al ejecutar el análisis';
+    let tipoError = 'ERROR_DESCONOCIDO';
     
     // Mensajes específicos para errores comunes
     if (mensajeError.includes('No se encontraron estudiantes')) {
       mensajeError = 'No se encontraron estudiantes para analizar. Verifica que las colecciones (nomina, asistencia, primer_bimestre, segundo_bimestre, tercer_bimestre, incidente, encuesta) contengan datos.';
+      tipoError = 'SIN_DATOS';
     } else if (mensajeError.includes('collection')) {
       mensajeError = `Error al acceder a las colecciones de MongoDB: ${mensajeError}`;
+      tipoError = 'ERROR_MONGODB';
+    } else if (mensajeError.includes('fetch') || mensajeError.includes('ECONNREFUSED') || mensajeError.includes('timeout')) {
+      mensajeError = `No se puede conectar al servicio Python en ${PYTHON_SERVICE_URL}. Asegúrate de que el servicio Python esté corriendo.`;
+      tipoError = 'SERVICIO_PYTHON_NO_DISPONIBLE';
     }
     
     res.status(500).json({ 
       success: false,
       error: mensajeError,
+      tipo_error: tipoError,
       detalles: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }

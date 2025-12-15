@@ -1,0 +1,12 @@
+# Versiones optimizadas para Windows (wheels precompilados)
+# Estas versiones tienen wheels disponibles y no requieren compilación
+
+flask>=3.0.0
+flask-cors>=4.0.0
+pymongo>=4.6.0
+scikit-learn>=1.4.0  # Versión más reciente con mejor soporte de wheels
+numpy>=1.26.0  # Versión más reciente con wheels para Python 3.13
+pandas>=2.1.0
+
+
+
