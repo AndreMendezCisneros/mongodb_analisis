@@ -19,6 +19,18 @@ export const DashboardView = () => {
   const [analysisResult, setAnalysisResult] = useState<SATEAnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   
+  // Cargar resultados guardados desde sessionStorage al montar
+  useEffect(() => {
+    const savedResult = sessionStorage.getItem('sate_analysis_result');
+    if (savedResult) {
+      try {
+        setAnalysisResult(JSON.parse(savedResult));
+      } catch (e) {
+        console.error('Error cargando resultados guardados:', e);
+      }
+    }
+  }, []);
+  
   // Estados para filtros de estudiantes
   const [selectedEstudiante1, setSelectedEstudiante1] = useState<string>('');
   const [selectedEstudiante2, setSelectedEstudiante2] = useState<string>('');
@@ -28,9 +40,10 @@ export const DashboardView = () => {
     setSelectedEstudiante2(value === 'none' ? '' : value);
   };
 
-  // Ejecutar análisis automáticamente al conectar
+  // Ejecutar análisis automáticamente solo si no hay resultados guardados
   useEffect(() => {
-    if (isConnected && !analysisResult && !loading) {
+    const hasSavedResult = sessionStorage.getItem('sate_analysis_result');
+    if (isConnected && !hasSavedResult && !analysisResult && !loading) {
       ejecutarAnalisis();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -54,6 +67,9 @@ export const DashboardView = () => {
         throw new Error('No se encontraron estudiantes en el análisis');
       }
       setAnalysisResult(resultado);
+      // Guardar en sessionStorage para compartir con AnalyticsView
+      sessionStorage.setItem('sate_analysis_result', JSON.stringify(resultado));
+      sessionStorage.setItem('sate_analysis_time', new Date().toISOString());
     } catch (err) {
       console.error('Error ejecutando análisis:', err);
       setError(err instanceof Error ? err.message : 'Error al ejecutar el análisis');

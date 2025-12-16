@@ -315,8 +315,16 @@ def clasificar_resultado(nota: float, umbral: float = MODEL_CONFIG["umbral_aprob
     return 1 if nota >= umbral else 0
 
 
-def calcular_metricas(y_true: List[int], y_pred: List[int]) -> Dict:
-    """Calcula métricas de validación del modelo"""
+def calcular_metricas(y_true: List[int], y_pred: List[int], y_scores: Optional[List[float]] = None) -> Dict:
+    """
+    Calcula métricas de validación del modelo
+    
+    Args:
+        y_true: Valores reales (binarios: 0 o 1)
+        y_pred: Predicciones binarias (0 o 1)
+        y_scores: Scores continuos para calcular AUC-ROC (opcional, si no se proporciona usa y_pred)
+                  Usar notas proyectadas como scores mejora significativamente el AUC-ROC
+    """
     if len(y_true) == 0 or len(y_pred) == 0:
         return {
             "precision": 0.0,
@@ -348,14 +356,30 @@ def calcular_metricas(y_true: List[int], y_pred: List[int]) -> Dict:
     recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
     f1 = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0.0
     
-    # AUC-ROC
-    if HAS_SKLEARN:
-        try:
-            auc_roc = roc_auc_score(y_true, y_pred)
-        except ValueError:
-            auc_roc = calcular_auc_roc_manual(y_true, y_pred)
+    # AUC-ROC: Usar scores continuos si están disponibles (MUCHO MÁS PRECISO)
+    if y_scores is not None and len(y_scores) == len(y_true):
+        # Usar scores continuos para un cálculo mucho más preciso del AUC-ROC
+        if HAS_SKLEARN:
+            try:
+                auc_roc = roc_auc_score(y_true, y_scores)
+                logger.info(f'AUC-ROC calculado con scores continuos (sklearn): {auc_roc:.4f}')
+            except (ValueError, Exception) as e:
+                logger.warning(f'Error calculando AUC-ROC con sklearn, usando método manual: {e}')
+                auc_roc = calcular_auc_roc_manual_con_scores(y_true, y_scores)
+        else:
+            auc_roc = calcular_auc_roc_manual_con_scores(y_true, y_scores)
+            logger.info(f'AUC-ROC calculado con scores continuos (manual): {auc_roc:.4f}')
     else:
-        auc_roc = calcular_auc_roc_manual(y_true, y_pred)
+        # Fallback: usar predicciones binarias (menos preciso, pero funciona)
+        if HAS_SKLEARN:
+            try:
+                # sklearn puede calcular AUC-ROC con predicciones binarias, pero es menos preciso
+                auc_roc = roc_auc_score(y_true, y_pred)
+                logger.warning('AUC-ROC calculado con predicciones binarias (menos preciso). Usa y_scores para mejor precisión.')
+            except ValueError:
+                auc_roc = calcular_auc_roc_manual(y_true, y_pred)
+        else:
+            auc_roc = calcular_auc_roc_manual(y_true, y_pred)
     
     return {
         "precision": float(precision),
@@ -371,8 +395,49 @@ def calcular_metricas(y_true: List[int], y_pred: List[int]) -> Dict:
     }
 
 
+def calcular_auc_roc_manual_con_scores(y_true: List[int], y_scores: List[float]) -> float:
+    """
+    Calcula AUC-ROC manualmente usando scores continuos (MÁS PRECISO)
+    
+    Este método es mucho más preciso que usar predicciones binarias porque
+    considera la "confianza" del modelo (nota proyectada) en lugar de solo
+    la clasificación final (aprueba/desaprueba).
+    """
+    if len(y_true) == 0 or len(y_scores) == 0:
+        return 0.5
+    
+    positivos_reales = sum(1 for y in y_true if y == 1)
+    negativos_reales = sum(1 for y in y_true if y == 0)
+    
+    if positivos_reales == 0 or negativos_reales == 0:
+        return 0.5
+    
+    # Crear pares (real, score)
+    pares = [(y_true[i], y_scores[i]) for i in range(len(y_true))]
+    
+    # Contar pares correctamente ordenados
+    pares_correctos = 0
+    total_pares = 0
+    
+    for i in range(len(pares)):
+        for j in range(i + 1, len(pares)):
+            # Solo comparar pares donde las clases reales son diferentes
+            if pares[i][0] != pares[j][0]:
+                total_pares += 1
+                # Verificar si el orden predicho es correcto
+                # Si el positivo real tiene score mayor que el negativo real, está bien ordenado
+                if ((pares[i][0] > pares[j][0] and pares[i][1] > pares[j][1]) or
+                    (pares[i][0] < pares[j][0] and pares[i][1] < pares[j][1])):
+                    pares_correctos += 1
+                # Si tienen el mismo score, contar como medio correcto (tie)
+                elif pares[i][1] == pares[j][1]:
+                    pares_correctos += 0.5
+    
+    return pares_correctos / total_pares if total_pares > 0 else 0.5
+
+
 def calcular_auc_roc_manual(y_true: List[int], y_pred: List[int]) -> float:
-    """Calcula AUC-ROC manualmente usando el método de pares"""
+    """Calcula AUC-ROC manualmente usando el método de pares (con predicciones binarias)"""
     if len(y_true) == 0 or len(y_pred) == 0:
         return 0.5
     
@@ -755,6 +820,7 @@ def ejecutar_analisis_sate(mongodb_uri: str, database_name: str) -> Dict:
         # Esto es más realista porque simula predecir el futuro
         y_true_temporal = []
         y_pred_temporal = []
+        y_scores_temporal = []  # Scores continuos para calcular AUC-ROC con mayor precisión
         
         for est in df_final:
             # Solo validar estudiantes que tienen al menos Bim1 y Bim2
@@ -795,24 +861,33 @@ def ejecutar_analisis_sate(mongodb_uri: str, database_name: str) -> Dict:
                     
                     y_true_temporal.append(realidad_bim3)
                     y_pred_temporal.append(prediccion_bim3)
+                    y_scores_temporal.append(nota_final_validacion)  # Guardar score continuo para AUC-ROC
         
-        # Calcular métricas con validación temporal
+        # Calcular métricas con validación temporal usando scores continuos (MEJORA SIGNIFICATIVA)
         if len(y_true_temporal) > 0:
             print(f'[INFO] Validación temporal: {len(y_true_temporal)} estudiantes con datos completos')
-            metricas = calcular_metricas(y_true_temporal, y_pred_temporal)
+            print(f'[INFO] Calculando AUC-ROC con scores continuos (notas proyectadas) para mayor precisión...')
+            metricas = calcular_metricas(y_true_temporal, y_pred_temporal, y_scores_temporal)
             
             # Log de métricas temporales para debugging
-            logger.info(f'VALIDACION TEMPORAL - AUC-ROC: {metricas["auc_roc"]:.4f}')
+            logger.info(f'VALIDACION TEMPORAL - AUC-ROC: {metricas["auc_roc"]:.4f} (usando scores continuos)')
             logger.info(f'VALIDACION TEMPORAL - Precision: {metricas["precision"]:.4f}, Recall: {metricas["recall"]:.4f}')
+            print(f'[OK] AUC-ROC mejorado usando scores continuos: {metricas["auc_roc"]:.4f}')
         else:
             print('[ADVERTENCIA] No hay suficientes datos para validación temporal, usando validación estándar')
-            # Fallback: validación estándar (menos ideal pero mejor que nada)
+            # Fallback: validación estándar usando notas proyectadas como scores
+            y_true = []
+            y_pred = []
+            y_scores = []
             for est in df_final:
-                est['Realidad_Binaria'] = clasificar_resultado(est.get('NotaBim3', 5))
+                realidad_bim3 = clasificar_resultado(est.get('NotaBim3', 5))
+                y_true.append(realidad_bim3)
+                y_pred.append(est['Prediccion_Final_Binaria'])
+                y_scores.append(est['Nota_Proyectada_B4'])  # Usar nota proyectada como score
             
-            y_true = [e.get('Realidad_Binaria', 0) for e in df_final]
-            y_pred = [e['Prediccion_Final_Binaria'] for e in df_final]
-            metricas = calcular_metricas(y_true, y_pred)
+            print('[INFO] Calculando AUC-ROC con scores continuos (notas proyectadas) para mayor precisión...')
+            metricas = calcular_metricas(y_true, y_pred, y_scores)
+            logger.info(f'VALIDACION ESTANDAR - AUC-ROC: {metricas["auc_roc"]:.4f} (usando scores continuos)')
         
         # ============================================
         # PREPARAR RESULTADOS FINALES

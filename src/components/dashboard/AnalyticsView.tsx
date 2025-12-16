@@ -24,7 +24,22 @@ export const AnalyticsView = () => {
   const [error, setError] = useState<string | null>(null);
   const [lastAnalysisTime, setLastAnalysisTime] = useState<Date | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
-  const hasRunInitialAnalysis = useRef(false);
+  
+  // Cargar resultados guardados desde sessionStorage al montar
+  useEffect(() => {
+    const savedResult = sessionStorage.getItem('sate_analysis_result');
+    const savedTime = sessionStorage.getItem('sate_analysis_time');
+    if (savedResult) {
+      try {
+        setAnalysisResult(JSON.parse(savedResult));
+        if (savedTime) {
+          setLastAnalysisTime(new Date(savedTime));
+        }
+      } catch (e) {
+        console.error('Error cargando resultados guardados:', e);
+      }
+    }
+  }, []);
 
   // Estados para filtros y búsqueda
   const [searchTerm, setSearchTerm] = useState('');
@@ -68,8 +83,11 @@ export const AnalyticsView = () => {
     try {
       const resultado = await ejecutarAnalisisSATE(abortController.signal);
       setAnalysisResult(resultado);
-      setLastAnalysisTime(new Date());
-      hasRunInitialAnalysis.current = true;
+      const now = new Date();
+      setLastAnalysisTime(now);
+      // Guardar en sessionStorage para compartir con DashboardView
+      sessionStorage.setItem('sate_analysis_result', JSON.stringify(resultado));
+      sessionStorage.setItem('sate_analysis_time', now.toISOString());
     } catch (err) {
       // No mostrar error si fue cancelado
       if (err instanceof Error && err.name === 'AbortError') {
@@ -82,12 +100,13 @@ export const AnalyticsView = () => {
     }
   }, [isConnected]);
 
-  // Ejecutar análisis automáticamente solo la primera vez que se conecta
+  // Ejecutar análisis automáticamente solo si no hay resultados guardados
   useEffect(() => {
-    if (isConnected && !hasRunInitialAnalysis.current && !analysisResult) {
+    const hasSavedResult = sessionStorage.getItem('sate_analysis_result');
+    if (isConnected && !hasSavedResult && !analysisResult && !loading) {
       ejecutarAnalisis();
     }
-  }, [isConnected, ejecutarAnalisis, analysisResult]);
+  }, [isConnected, ejecutarAnalisis, analysisResult, loading]);
 
   // Limpiar al desmontar
   useEffect(() => {
